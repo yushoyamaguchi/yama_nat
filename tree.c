@@ -105,6 +105,10 @@ void node_insert(struct node *join_node, struct node *root){
         zero_or_one=is_not_zero(mask&host_order_subnet);
         if(search->child[zero_or_one]==NULL){
             new_node=malloc(sizeof(struct node));
+            if(new_node==NULL){
+                printf("MEM_ERR\n");
+                exit(EXIT_FAILURE);
+            }
             init_tree_node(new_node);
             new_node->parent=search;
             search->child[zero_or_one]=new_node;

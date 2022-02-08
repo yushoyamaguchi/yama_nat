@@ -359,6 +359,10 @@ int main(int argc,char *argv[],char *envp[])
 	json_error_t jerror;
 	struct node *root;
 	root=malloc(sizeof(struct node));
+	if(root==NULL){
+        printf("MEM_ERR\n");
+        exit(EXIT_FAILURE);
+    }
 	init_tree_node(root);
 	root->is_empty=1;
 	root->is_root=1;

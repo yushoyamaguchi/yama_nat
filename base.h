@@ -1,3 +1,5 @@
+#define MEM_ERR "alloc error"
+
 typedef struct	{
 	int	soc;
 	u_char	hwaddr[6];
