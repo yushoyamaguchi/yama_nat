@@ -1,0 +1,74 @@
+nodes:
+- name: R1
+  image: yama_router:test
+  interfaces:
+  - { name: net0, type: direct, args: C1#net0 }
+  - { name: net1, type: direct, args: R3#net0 }
+  - { name: net2, type: direct, args: R4#net0 }
+- name: R2
+  image: yama_router:test
+  interfaces:
+  - { name: net0, type: direct, args: C2#net0 }
+  - { name: net1, type: direct, args: R3#net1 }
+  - { name: net2, type: direct, args: R4#net1 }
+
+- name: R3
+  image: yama_router:test
+  interfaces:
+  - { name: net0, type: direct, args: R1#net1 }
+  - { name: net1, type: direct, args: R2#net1 }  
+
+- name: R4
+  image: yama_router:test
+  interfaces:
+  - { name: net0, type: direct, args: R1#net2 }
+  - { name: net1, type: direct, args: R2#net2 }    
+
+- name: C1
+  image: yama_router:test
+  interfaces:
+  - { name: net0, type: direct, args: R1#net0 }
+
+- name: C2
+  image: yama_router:test
+  interfaces:
+  - { name: net0, type: direct, args: R2#net0 }  
+
+
+node_configs:
+- name: R1
+  cmds:
+  - cmd: ip addr add 10.1.1.1/24 dev net0
+  - cmd: ip addr add 10.1.13.1/24 dev net1
+  - cmd: ip addr add 10.1.14.1/24 dev net2
+  - cmd: ip route add 10.0.0.0/8 via 10.1.13.2
+  - cmd: ip route add 10.2.24.0/24 via 10.1.14.2
+- name: R2
+  cmds:
+  - cmd: ip addr add 10.2.1.1/24 dev net0
+  - cmd: ip addr add 10.2.23.1/24 dev net1
+  - cmd: ip addr add 10.2.24.1/24 dev net2
+  - cmd: sysctl -w net.ipv4.conf.all.forwarding=0
+- name: R3
+  cmds:
+  - cmd: ip addr add 10.1.13.2/24 dev net0
+  - cmd: ip addr add 10.2.23.2/24 dev net1
+  - cmd: ip route add 10.1.0.0/16 via 10.1.13.1
+  - cmd: ip route add 10.2.0.0/16 via 10.2.23.1
+
+- name: R4
+  cmds:
+  - cmd: ip addr add 10.1.14.2/24 dev net0
+  - cmd: ip addr add 10.2.24.2/24 dev net1
+  - cmd: ip route add 10.1.0.0/16 via 10.1.14.1
+  - cmd: ip route add 10.2.0.0/16 via 10.2.24.1  
+
+- name: C1
+  cmds:
+  - cmd: ip addr add 10.1.1.2/24 dev net0
+  - cmd: ip route add 0.0.0.0/0 via 10.1.1.1
+
+- name: C2
+  cmds:
+  - cmd: ip addr add 10.2.1.2/24 dev net0
+  - cmd: ip route add 0.0.0.0/0 via 10.2.1.1  

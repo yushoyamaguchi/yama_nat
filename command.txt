@@ -1,0 +1,4 @@
+tinet reconf -c spec.yaml | sudo sh -x
+sudo docker exec -it R2 /bin/bash
+sudo docker exec -it R2 tcpdump -i net0
+sudo docker cp R2:/a.pcap ~/pcap
