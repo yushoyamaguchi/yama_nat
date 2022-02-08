@@ -20,12 +20,13 @@
 #include	"sendBuf.h"
 #include	"json_config.h"
 #include	"tree.h"
+#include	"nat_table.h"
 
 #define POLL_TIMEOUT 100
 
 
 
-//PARAM	Param={"net0","net1",0,"10.255.1.1"};
+
 PARAM_new	Param_json;
 
 struct in_addr	NextRouter;
@@ -34,7 +35,6 @@ DEVICE	Device[MAX_DEV_NUM];
 
 int	EndFlag=0;
 
-//struct node *root;
 
 int DebugPrintf(char *fmt,...)
 {
@@ -110,7 +110,7 @@ int SendIcmpTimeExceeded(int deviceNo,struct ether_header *eh,struct iphdr *iphd
 	return(0);
 }
 
-int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *table_root)
+int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *table_root,struct nat_table *table)
 {
 	u_char	*ptr;
 	int	lest;
@@ -197,6 +197,10 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *table_root)
 
 		//tno=(!deviceNo);
 
+		if(iphdr->protocol==IPPROTO_TCP ){
+
+		}
+
 		for(tno=0;tno<Param_json.num_of_dev;tno++){
 			if((tno!=deviceNo)&&((iphdr->daddr&Device[tno].netmask.s_addr)==Device[tno].subnet.s_addr)){
 				IP2MAC	*ip2mac;
@@ -275,7 +279,7 @@ void cui(char *content){
 	}
 }
 
-int Router(struct node *table_root)
+int Router(struct node *table_root,struct nat_table *table)
 {
 	struct pollfd	targets[MAX_DEV_NUM+1];
 	int	nready,i,size;
@@ -308,7 +312,7 @@ int Router(struct node *table_root)
 							DebugPerror("read");
 						}
 						else{
-							AnalyzePacket(i,buf,size,table_root);
+							AnalyzePacket(i,buf,size,table_root,table);
 							is_sock=1;
 						}
 					}
@@ -349,6 +353,7 @@ int main(int argc,char *argv[],char *envp[])
 	char	buf[80];
 	pthread_attr_t	attr;
 	int	status,i;
+	struct nat_table	table;
 
 	json_t json_object;
 	json_error_t jerror;
@@ -399,7 +404,7 @@ int main(int argc,char *argv[],char *envp[])
 	signal(SIGTTOU,SIG_IGN);
 
 	DebugPrintf("router start\n");
-	Router(root);
+	Router(root,&table);
 	DebugPrintf("router end\n");
 
 	pthread_join(BufTid,NULL);
