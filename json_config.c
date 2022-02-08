@@ -48,15 +48,22 @@ void json_read(PARAM_new *pa,json_t *json_object,json_error_t *jerror,struct nod
     }
     int i=0;
     char buf[128];
+    pa->num_of_dev=0;
+    
+    //WAN側の設定
+    strcpy(buf,json_string_value(json_object_get(json_object,"WAN_interface")));
+    pa->Device[0]=malloc(MAX_DEVNAME_LEN*sizeof(char));
+    strncpy(pa->Device[0],buf,MAX_DEVNAME_LEN*sizeof(char));
+    pa->num_of_dev++;
+
     json_t *interfaces_array;
     json_t *interfaces_object;
     interfaces_object=malloc(sizeof(json_t));
-    interfaces_array=json_object_get(json_object,"interfaces");
-    pa->num_of_dev=0;
+    interfaces_array=json_object_get(json_object,"LAN_interfaces");
     json_array_foreach(interfaces_array,i,interfaces_object){
         strcpy(buf,json_string_value(interfaces_object));
-        pa->Device[i]=malloc(20*sizeof(char));
-        strncpy(pa->Device[i],buf,20*sizeof(char));
+        pa->Device[i+1]=malloc(MAX_DEVNAME_LEN*sizeof(char));
+        strncpy(pa->Device[i+1],buf,MAX_DEVNAME_LEN*sizeof(char));
         pa->num_of_dev++;
     }
     json_t *table_array;

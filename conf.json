@@ -1,6 +1,6 @@
 {
-    "interfaces":[
-        "net0",
+    "WAN_interface":"net0",
+    "LAN_interfaces":[
         "net1",
         "net2"
     ],

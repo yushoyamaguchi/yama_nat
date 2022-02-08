@@ -1,4 +1,5 @@
 #define MAX_DEV_NUM 20
+#define MAX_DEVNAME_LEN 30
 
 typedef struct	{
 	char	*Device1;
