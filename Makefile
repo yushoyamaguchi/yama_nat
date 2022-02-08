@@ -1,4 +1,4 @@
-OBJS=main.o netutil.o ip2mac.o sendBuf.o json_config.o tree.o
+OBJS=main.o netutil.o ip2mac.o sendBuf.o json_config.o tree.o nat_table.o
 SRCS=$(OBJS:%.o=%.c)
 CFLAGS=-g -Wall
 LDLIBS=-lpthread -ljansson
