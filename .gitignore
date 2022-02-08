@@ -1,0 +1,6 @@
+*.o
+yama_router
+core
+router
+*.swp
+yama_nat
