@@ -199,15 +199,7 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *table_root,str
 
 		if(deviceNo==WAN_DEV_ID){
 			//変換してLAN側へ
-			if(iphdr->protocol==IPPROTO_TCP){
-
-			}
-			else if(iphdr->protocol==IPPROTO_ICMP){
-
-			}
-			else{
-
-			}
+			
 		}
 		else{
 			for(tno=WAN_DEV_NUM;tno<Param_json.num_of_dev;tno++){
