@@ -23,7 +23,7 @@
 #include	"nat_table.h"
 
 #define POLL_TIMEOUT 100
-
+#define WAN_DEV_ID	0
 
 
 
@@ -418,8 +418,6 @@ int main(int argc,char *argv[],char *envp[])
 		free(Param_json.Device[i]);
 	}
 
-
-	//free() of Device
 
 	printf("free of tree\n");
 	tree_destruct(root);

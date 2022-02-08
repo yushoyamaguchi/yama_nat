@@ -1,5 +1,7 @@
 #define MAX_DEV_NUM 20
 #define MAX_DEVNAME_LEN 30
+#define WAN_DEV_ID	0
+#define WAN_DEV_NUM	1
 
 typedef struct	{
 	char	*Device1;

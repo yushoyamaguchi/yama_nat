@@ -56,12 +56,12 @@ void json_read(PARAM_new *pa,json_t *json_object,json_error_t *jerror,struct nod
     
     //WAN側の設定
     strcpy(buf,json_string_value(json_object_get(json_object,"WAN_interface")));
-    pa->Device[0]=malloc(MAX_DEVNAME_LEN*sizeof(char));
-    if(pa->Device[0]==NULL){
+    pa->Device[WAN_DEV_ID]=malloc(MAX_DEVNAME_LEN*sizeof(char));
+    if(pa->Device[WAN_DEV_ID]==NULL){
         printf("MEM_ERR\n");
         exit(EXIT_FAILURE);
     }
-    strncpy(pa->Device[0],buf,MAX_DEVNAME_LEN*sizeof(char));
+    strncpy(pa->Device[WAN_DEV_ID],buf,MAX_DEVNAME_LEN*sizeof(char));
     pa->num_of_dev++;
 
     json_t *interfaces_array;
@@ -74,12 +74,12 @@ void json_read(PARAM_new *pa,json_t *json_object,json_error_t *jerror,struct nod
     interfaces_array=json_object_get(json_object,"LAN_interfaces");
     json_array_foreach(interfaces_array,i,interfaces_object){
         strcpy(buf,json_string_value(interfaces_object));
-        pa->Device[i+1]=malloc(MAX_DEVNAME_LEN*sizeof(char));
-        if(pa->Device[i+1]==NULL){
+        pa->Device[i+WAN_DEV_NUM]=malloc(MAX_DEVNAME_LEN*sizeof(char));
+        if(pa->Device[i+WAN_DEV_NUM]==NULL){
             printf("MEM_ERR\n");
             exit(EXIT_FAILURE);
         }
-        strncpy(pa->Device[i+1],buf,MAX_DEVNAME_LEN*sizeof(char));
+        strncpy(pa->Device[i+WAN_DEV_NUM],buf,MAX_DEVNAME_LEN*sizeof(char));
         pa->num_of_dev++;
     }
     json_t *table_array;
