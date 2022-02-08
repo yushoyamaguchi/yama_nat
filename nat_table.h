@@ -8,6 +8,7 @@ struct nat_table_element{
     int     id;
     struct  five_tuple  *src_tpl;
     struct  five_tuple  *dst_tpl;
+    int     protocol;
 };
 
 struct five_tuple{

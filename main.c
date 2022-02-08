@@ -198,9 +198,19 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *table_root,str
 		//tno=(!deviceNo);
 
 		if(deviceNo==WAN_DEV_ID){
+			//変換してLAN側へ
+			if(iphdr->protocol==IPPROTO_TCP){
+
+			}
+			else if(iphdr->protocol==IPPROTO_ICMP){
+
+			}
+			else{
+
+			}
 		}
 		else{
-			for(tno=0;tno<Param_json.num_of_dev;tno++){
+			for(tno=WAN_DEV_NUM;tno<Param_json.num_of_dev;tno++){
 				if((tno!=deviceNo)&&((iphdr->daddr&Device[tno].netmask.s_addr)==Device[tno].subnet.s_addr)){
 
 
@@ -209,7 +219,7 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *table_root,str
 				}
 			}
 			if(is_connected_to_dst==0){
-				//wan側
+				//変換してwan側へ
 			}
 		}
 

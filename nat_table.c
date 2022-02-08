@@ -30,6 +30,7 @@ void init_nat_table_element(struct nat_table_element *ele){
     ele->id=0;
     ele->src_tpl=NULL;
     ele->dst_tpl=NULL;
+    ele->protocol=0;
 }
 
 void init_five_tuple(struct five_tuple *tpl){
