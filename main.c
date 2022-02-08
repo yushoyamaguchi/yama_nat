@@ -23,7 +23,7 @@
 #include	"nat_table.h"
 
 #define POLL_TIMEOUT 100
-#define WAN_DEV_ID	0
+
 
 
 
@@ -197,70 +197,21 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *table_root,str
 
 		//tno=(!deviceNo);
 
-		if(iphdr->protocol==IPPROTO_TCP ){
-
+		if(deviceNo==WAN_DEV_ID){
 		}
-
-		for(tno=0;tno<Param_json.num_of_dev;tno++){
-			if((tno!=deviceNo)&&((iphdr->daddr&Device[tno].netmask.s_addr)==Device[tno].subnet.s_addr)){
-				IP2MAC	*ip2mac;
-				DebugPrintf("[%d]:%s to TargetSegment\n",deviceNo,in_addr_t2str(iphdr->daddr,buf,sizeof(buf)));
-				if(iphdr->daddr==Device[tno].addr.s_addr){
-					DebugPrintf("[%d]:recv:myaddr\n",deviceNo);
-					return(1);
-				}
-				ip2mac=Ip2Mac(tno,iphdr->daddr,NULL);
-				if(ip2mac->flag==FLAG_NG||ip2mac->sd.dno!=0){
-					DebugPrintf("[%d]:Ip2Mac:error or sending\n",deviceNo);
-					AppendSendData(ip2mac,1,iphdr->daddr,data,size);
-					return(-1);
-				}
-				else{
-					memcpy(hwaddr,ip2mac->hwaddr,6);
-				}
-				is_connected_to_dst=1;
-				break;
-			}
-		}
-		if(is_connected_to_dst==0){
-			IP2MAC	*ip2mac;
-			struct node *nh;
-			u_int32_t nh_addr;
-			nh=longest_match_by_daddr(iphdr->daddr,table_root);
-			if(nh==NULL){
-				return(-1);
-			}
-			nh_addr=nh->next_hop;
-			int found_nh_subnet=0;
+		else{
 			for(tno=0;tno<Param_json.num_of_dev;tno++){
-				if((tno!=deviceNo)&&((nh_addr&Device[tno].netmask.s_addr)==Device[tno].subnet.s_addr)){
-					found_nh_subnet=1;
+				if((tno!=deviceNo)&&((iphdr->daddr&Device[tno].netmask.s_addr)==Device[tno].subnet.s_addr)){
+
+
+					is_connected_to_dst=1;
 					break;
 				}
 			}
-			if(found_nh_subnet==0){
-				return(-1);
+			if(is_connected_to_dst==0){
+				//wan側
 			}
-			ip2mac=Ip2Mac(tno,nh_addr,NULL);
-			if(ip2mac->flag==FLAG_NG||ip2mac->sd.dno!=0){
-				DebugPrintf("[%d]:Ip2Mac:error or sending\n",deviceNo);
-				AppendSendData(ip2mac,1,nh_addr,data,size);
-				return(-1);
-			}
-			else{
-				memcpy(hwaddr,ip2mac->hwaddr,6);
-			}
-
 		}
-		memcpy(eh->ether_dhost,hwaddr,6);
-		memcpy(eh->ether_shost,Device[tno].hwaddr,6);
-
-
-		iphdr->ttl--;
-		iphdr->check=0;
-		iphdr->check=checksum2((u_char *)iphdr,sizeof(struct iphdr),option,optionLen);
-
-		write(Device[tno].soc,data,size);
 
 	}
 

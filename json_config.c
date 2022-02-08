@@ -17,6 +17,7 @@
 
 #include	"json_config.h"
 #include	"tree.h"
+#include	"base.h"
 
 void init_PARAM_new(PARAM_new *par){
     par->num_of_dev=0;
