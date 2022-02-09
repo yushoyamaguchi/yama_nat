@@ -25,11 +25,9 @@
 
 
 void init_nat_table_element(struct nat_table_element *ele){
-    ele->prev=NULL;
-    ele->next=NULL;
     ele->id=0;
-    ele->src_tpl=NULL;
-    ele->dst_tpl=NULL;
+    ele->loc_tpl=NULL;
+    ele->glo_tpl=NULL;
     ele->protocol=0;
 }
 
@@ -39,4 +37,8 @@ void init_five_tuple(struct five_tuple *tpl){
     tpl->dst_addr=0;
     tpl->dst_port=0;
     tpl->protocol=0;
+}
+
+void wan_to_lan(struct iphdr *iphdr,u_char *L3_packet_start,struct five_tuple *ret,struct nat_table *table){
+
 }

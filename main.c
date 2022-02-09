@@ -199,7 +199,22 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *table_root,str
 
 		if(deviceNo==WAN_DEV_ID){
 			//変換してLAN側へ
-			
+			struct five_tuple ret;
+			init_five_tuple(&ret);
+			wan_to_lan(iphdr,ptr,&ret,table);
+			if(iphdr->protocol==IPPROTO_TCP){
+				struct tcphdr *tcp_hdr;
+				tcp_hdr=(struct tcphdr *)ptr;
+				tcp_hdr->dest=ret.dst_port;
+			}
+			else if(iphdr->protocol==IPPROTO_UDP){
+				struct udphdr *udp_hdr;
+				udp_hdr=(struct udphdr *)ptr;
+				udp_hdr->uh_dport=ret.dst_port;
+			}
+			else{
+
+			}
 		}
 		else{
 			for(tno=WAN_DEV_NUM;tno<Param_json.num_of_dev;tno++){
