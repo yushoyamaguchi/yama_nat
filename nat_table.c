@@ -12,6 +12,8 @@
 #include	<netinet/if_ether.h>
 #include	<netinet/ip.h>
 #include	<netinet/ip_icmp.h>
+#include	<netinet/udp.h>
+#include	<netinet/tcp.h>
 #include	<pthread.h>
 #include	<jansson.h>
 #include	"netutil.h"

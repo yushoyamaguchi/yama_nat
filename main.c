@@ -12,6 +12,8 @@
 #include	<netinet/if_ether.h>
 #include	<netinet/ip.h>
 #include	<netinet/ip_icmp.h>
+#include	<netinet/udp.h>
+#include	<netinet/tcp.h>
 #include	<pthread.h>
 #include	<jansson.h>
 #include	"netutil.h"
@@ -110,14 +112,76 @@ int SendIcmpTimeExceeded(int deviceNo,struct ether_header *eh,struct iphdr *iphd
 	return(0);
 }
 
-int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *table_root,struct nat_table *table)
+int buf_or_set_mac(IP2MAC *ip2mac,u_int32_t nh_addr,u_char *data,int size,u_char *hwaddr,int tno){
+	if(ip2mac->flag==FLAG_NG||ip2mac->sd.dno!=0){
+		DebugPrintf("[%d]:Ip2Mac:error or sending\n",tno);
+		AppendSendData(ip2mac,tno,nh_addr,data,size);
+		return(-1);
+	}
+	else{
+		memcpy(hwaddr,ip2mac->hwaddr,6);
+		return 1;
+	}
+}
+
+int SetNext(u_char *hwaddr,u_int32_t dst_addr,int deviceNo,u_char *data,int size,struct node *table_root){
+	char	buf[80];
+	int	tno;
+	int is_connected_to_dst=0;
+
+	for(tno=0;tno<Param_json.num_of_dev;tno++){
+		if((tno!=deviceNo)&&((dst_addr&Device[tno].netmask.s_addr)==Device[tno].subnet.s_addr)){
+			IP2MAC	*ip2mac;
+			DebugPrintf("[%d]:%s to TargetSegment\n",deviceNo,in_addr_t2str(dst_addr,buf,sizeof(buf)));
+			if(dst_addr==Device[tno].addr.s_addr){
+				DebugPrintf("[%d]:recv:myaddr\n",deviceNo);
+				return(-1);
+			}
+			ip2mac=Ip2Mac(tno,dst_addr,NULL);
+			if(buf_or_set_mac(ip2mac,dst_addr,data,size,hwaddr,tno)==-1){
+				return(-1);
+			}
+			is_connected_to_dst=1;
+			break;
+		}
+	}
+	if(is_connected_to_dst==0){
+		IP2MAC	*ip2mac;
+		struct node *nh;
+		u_int32_t nh_addr;
+		nh=longest_match_by_daddr(dst_addr,table_root);
+		if(nh==NULL){
+			return(-1);
+		}
+		else if(nh->subnet_mask==0){
+			return(LAN_TO_WAN_SIG);	//送り先がWAN
+		}
+		nh_addr=nh->next_hop;
+		int found_nh_subnet=0;
+		for(tno=0;tno<Param_json.num_of_dev;tno++){
+			if((tno!=deviceNo)&&((nh_addr&Device[tno].netmask.s_addr)==Device[tno].subnet.s_addr)){
+				found_nh_subnet=1;
+				break;
+			}
+		}
+		if(found_nh_subnet==0){
+			return(-1);
+		}
+		ip2mac=Ip2Mac(tno,nh_addr,NULL);
+		if(buf_or_set_mac(ip2mac,nh_addr,data,size,hwaddr,tno)==-1){
+			return(-1);
+		}
+	}
+	return tno;
+}
+
+int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *rttable_root,struct nat_table *nat_table)
 {
 	u_char	*ptr;
 	int	lest;
 	struct ether_header	*eh;
 	char	buf[80];
 	int	tno;
-	int is_connected_to_dst=0;
 	u_char	hwaddr[6];
 
 	ptr=data;
@@ -200,8 +264,9 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *table_root,str
 		if(deviceNo==WAN_DEV_ID){
 			//変換してLAN側へ
 			struct five_tuple ret;
+			u_int32_t	loc_dst_addr;
 			init_five_tuple(&ret);
-			wan_to_lan(iphdr,ptr,&ret,table);
+			wan_to_lan(iphdr,ptr,&ret,nat_table);
 			if(iphdr->protocol==IPPROTO_TCP){
 				struct tcphdr *tcp_hdr;
 				tcp_hdr=(struct tcphdr *)ptr;
@@ -212,21 +277,23 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *table_root,str
 				udp_hdr=(struct udphdr *)ptr;
 				udp_hdr->uh_dport=ret.dst_port;
 			}
-			else{
-
+			loc_dst_addr=ret.dst_addr;
+			if(SetNext(hwaddr,loc_dst_addr,deviceNo,data,size,rttable_root)<0){
+				return(-1);
 			}
+
+			//チェックサム等
 		}
 		else{
-			for(tno=WAN_DEV_NUM;tno<Param_json.num_of_dev;tno++){
-				if((tno!=deviceNo)&&((iphdr->daddr&Device[tno].netmask.s_addr)==Device[tno].subnet.s_addr)){
-
-
-					is_connected_to_dst=1;
-					break;
-				}
+			int SetNextRes=SetNext(hwaddr,iphdr->daddr,deviceNo,data,size,rttable_root);
+			if(SetNextRes==-1){
+				return(-1);
 			}
-			if(is_connected_to_dst==0){
-				//変換してwan側へ
+			else if(SetNextRes==LAN_TO_WAN_SIG){
+				//nat tableに登録したのち変換して送信処理
+			}
+			else{
+				//チェックサム等 else節外すのもあり
 			}
 		}
 
