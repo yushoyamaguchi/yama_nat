@@ -288,7 +288,7 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *rttable_root,s
 			}
 			else if(tno==LAN_TO_WAN_SIG){
 				//nat tableに登録したのち変換して送信処理
-				lan_to_wan(iphdr,ptr,nat_table);
+				lan_to_wan(iphdr,ptr,nat_table,Device);
 			}
 			else{
 				//チェックサム等 else節外すのもあり
