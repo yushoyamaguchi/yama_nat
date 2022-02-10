@@ -1,5 +1,6 @@
 struct nat_table{
-    struct nat_table_element *table;
+    struct nat_table_element *table_ele;
+    int     num;
 };
 
 struct nat_table_element{
@@ -21,4 +22,6 @@ void init_nat_table_element(struct nat_table_element *ele);
 
 void init_five_tuple(struct five_tuple *tpl);
 
-void wan_to_lan(struct iphdr *iphdr,u_char *L3_packet_start,struct five_tuple *ret,struct nat_table *table);
+int wan_to_lan(struct iphdr *iphdr,u_char *l3_start,struct nat_table *table);
+
+int lan_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table *table);

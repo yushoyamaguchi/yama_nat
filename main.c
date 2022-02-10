@@ -263,34 +263,32 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *rttable_root,s
 
 		if(deviceNo==WAN_DEV_ID){
 			//変換してLAN側へ
-			struct five_tuple ret;
-			u_int32_t	loc_dst_addr;
-			init_five_tuple(&ret);
-			wan_to_lan(iphdr,ptr,&ret,nat_table);
-			if(iphdr->protocol==IPPROTO_TCP){
-				struct tcphdr *tcp_hdr;
-				tcp_hdr=(struct tcphdr *)ptr;
-				tcp_hdr->dest=ret.dst_port;
-			}
-			else if(iphdr->protocol==IPPROTO_UDP){
-				struct udphdr *udp_hdr;
-				udp_hdr=(struct udphdr *)ptr;
-				udp_hdr->uh_dport=ret.dst_port;
-			}
-			loc_dst_addr=ret.dst_addr;
-			if(SetNext(hwaddr,loc_dst_addr,deviceNo,data,size,rttable_root)<0){
+			if(iphdr->daddr!=Device[WAN_DEV_ID].addr.s_addr){
 				return(-1);
 			}
-
+			if(wan_to_lan(iphdr,ptr,nat_table)==-1){
+				return(-1);
+			}
+			tno=SetNext(hwaddr,iphdr->daddr,deviceNo,data,size,rttable_root);
+			if(tno<0){
+				return(-1);
+			}
 			//チェックサム等
+			memcpy(eh->ether_dhost,hwaddr,6);
+			memcpy(eh->ether_shost,Device[tno].hwaddr,6);
+			iphdr->ttl--;
+			iphdr->check=0;
+			iphdr->check=checksum2((u_char *)iphdr,sizeof(struct iphdr),option,optionLen);
+			write(Device[tno].soc,data,size);
 		}
 		else{
-			int SetNextRes=SetNext(hwaddr,iphdr->daddr,deviceNo,data,size,rttable_root);
-			if(SetNextRes==-1){
+			tno=SetNext(hwaddr,iphdr->daddr,deviceNo,data,size,rttable_root);
+			if(tno==-1){
 				return(-1);
 			}
-			else if(SetNextRes==LAN_TO_WAN_SIG){
+			else if(tno==LAN_TO_WAN_SIG){
 				//nat tableに登録したのち変換して送信処理
+				lan_to_wan(iphdr,ptr,nat_table);
 			}
 			else{
 				//チェックサム等 else節外すのもあり
