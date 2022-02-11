@@ -1,7 +1,7 @@
 #define MEM_ERR "alloc error"
 #define WAN_DEV_ID	0
 #define WAN_DEV_NUM	1
-#define LAN_TO_WAN_SIG  -10
+
 
 typedef struct	{
 	int	soc;

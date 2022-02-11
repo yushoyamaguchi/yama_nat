@@ -146,7 +146,7 @@ int search_next_mac(u_int32_t *nh_addr,u_char *hwaddr,u_int32_t dst_addr,int dev
 	}
 	else if(nh->subnet_mask==0){
 		*nh_addr=nh->next_hop;
-		return(LAN_TO_WAN_SIG);	//送り先がWAN
+		return(WAN_DEV_ID);	//送り先がWAN
 	}
 	*nh_addr=nh->next_hop;
 	for(tno=0;tno<Param_json.num_of_dev;tno++){
@@ -189,7 +189,7 @@ int decide_next_mac(u_char *hwaddr,u_int32_t dst_addr,int deviceNo,u_char *data,
 			return(-1);
 		}
 		else if(nh->subnet_mask==0){
-			return(LAN_TO_WAN_SIG);	//送り先がWAN
+			return(WAN_DEV_ID);	//送り先がWAN
 		}
 		nh_addr=nh->next_hop;
 		int found_nh_subnet=0;
@@ -323,7 +323,7 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *rttable_root,s
 			if(tno==-1){
 				return(-1);
 			}
-			else if(tno==LAN_TO_WAN_SIG){
+			else if(tno==WAN_DEV_ID){
 				//nat tableに登録したのち変換して送信前処理
 				lan_to_wan(iphdr,ptr,nat_table,Device);//src addr portの変換
 			}
@@ -497,9 +497,9 @@ int main(int argc,char *argv[],char *envp[])
 	}
 
 
-	printf("free()\n");
 	tree_destruct(root);
 	del_nat_table(&table);
+	printf("\nGood Bye!\n");
 
 	return(0);
 }

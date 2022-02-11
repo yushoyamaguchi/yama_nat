@@ -155,12 +155,20 @@ int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *tabl
     struct nat_table_element *new_ele;
     if(table->start==NULL){
         table->start=malloc(sizeof(struct nat_table_element));
+        if(table->start==NULL){
+            printf(MEM_ERR);
+            return(-1);
+        }
         new_ele=table->start;
         init_nat_table_element(new_ele);
         table->end=new_ele;
     }
     else{
         table->end->next=malloc(sizeof(struct nat_table_element));
+        if(table->end->next==NULL){
+            printf(MEM_ERR);
+            return(-1);
+        }
         new_ele=table->end->next;
         init_nat_table_element(new_ele);
         table->end->next=new_ele;
@@ -168,8 +176,16 @@ int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *tabl
         table->end=new_ele;
     }
     new_ele->loc_tpl=malloc(sizeof(struct five_tuple));
+    if(new_ele->loc_tpl==NULL){
+        printf(MEM_ERR);
+        return(-1);
+    }
     init_five_tuple(new_ele->loc_tpl);
     new_ele->glo_tpl=malloc(sizeof(struct five_tuple));
+    if(new_ele->glo_tpl==NULL){
+        printf(MEM_ERR);
+        return(-1);
+    }
     init_five_tuple(new_ele->glo_tpl);
     cp_from_iphdr(iphdr,new_ele);
     cp_from_l3hdr(iphdr,l3_start,new_ele);
@@ -191,34 +207,38 @@ int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *tabl
 void del_element(struct nat_table_element *ele){
     free(ele->loc_tpl);
     free(ele->glo_tpl);
+
 }
 
 void del_nat_table(struct nat_table *table){
     struct nat_table_element *del=table->start;
     if(del==NULL){
-        exit(0);
+        return;
     }
+    int i=0;
     struct nat_table_element *del2=table->start->next;
     while(del!=NULL){
+        i++;
         del2=del->next;
-        del_element(del->prev);
+        del_element(del);
         free(del);
         del=del2;
     }
-    del_element(table->end);
-    free(table->end);
 }
 
 int lan_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table *table,DEVICE *dev){
     int found=0;
     struct nat_table_element *search;
     search=table->start;
-    do{
-        if(tuple_check_to_wan(iphdr,l3_start,search)==1){
-            found=1;
-            break;
-        }
-    }while(search!=table->end);
+    if(search!=NULL){
+        do{
+            if(tuple_check_to_wan(iphdr,l3_start,search)==1){
+                found=1;
+                break;
+            }
+            search=search->next;
+        }while(search!=NULL);
+    }
     if(!found){
         //port割り振ってNATテーブルに要素追加
         insert_nat_table(iphdr,l3_start,table,dev);
