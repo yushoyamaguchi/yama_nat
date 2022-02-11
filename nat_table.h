@@ -33,3 +33,5 @@ void init_five_tuple(struct five_tuple *tpl);
 int wan_to_lan(struct iphdr *iphdr,u_char *l3_start,struct nat_table *table);
 
 int lan_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table *table,DEVICE *dev);
+
+void del_nat_table(struct nat_table *table);

@@ -452,8 +452,9 @@ int main(int argc,char *argv[],char *envp[])
 	}
 
 
-	printf("free of tree\n");
+	printf("free()\n");
 	tree_destruct(root);
+	del_nat_table(table);
 
 	return(0);
 }

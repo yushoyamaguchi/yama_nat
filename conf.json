@@ -1,14 +1,13 @@
 {
     "WAN_interface":"net0",
     "LAN_interfaces":[
-        "net1",
-        "net2"
+        "net1"
     ],
     "routing_table":[
         {
             "dest_addr":"0.0.0.0",
             "subnet_mask":"0",
-            "next_hop":"10.1.1.2"
+            "next_hop":"10.255.1.1"
         }
     ]
 
