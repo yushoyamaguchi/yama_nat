@@ -112,7 +112,7 @@ int SendIcmpTimeExceeded(int deviceNo,struct ether_header *eh,struct iphdr *iphd
 	return(0);
 }
 
-int buf_or_set_mac(IP2MAC *ip2mac,u_int32_t nh_addr,u_char *data,int size,u_char *hwaddr,int tno){
+int buf_or_get_mac(IP2MAC *ip2mac,u_int32_t nh_addr,u_char *data,int size,u_char *hwaddr,int tno){
 	if(ip2mac->flag==FLAG_NG||ip2mac->sd.dno!=0){
 		DebugPrintf("[%d]:Ip2Mac:error or sending\n",tno);
 		AppendSendData(ip2mac,tno,nh_addr,data,size);
@@ -124,7 +124,41 @@ int buf_or_set_mac(IP2MAC *ip2mac,u_int32_t nh_addr,u_char *data,int size,u_char
 	}
 }
 
-int SetNext(u_char *hwaddr,u_int32_t dst_addr,int deviceNo,u_char *data,int size,struct node *table_root){
+int search_next_mac(u_int32_t *nh_addr,u_char *hwaddr,u_int32_t dst_addr,int deviceNo,u_char *data,int size,struct node *table_root){
+	char	buf[80];
+	int	tno;
+	for(tno=0;tno<Param_json.num_of_dev;tno++){
+		if((tno!=deviceNo)&&((dst_addr&Device[tno].netmask.s_addr)==Device[tno].subnet.s_addr)){
+			DebugPrintf("[%d]:%s to TargetSegment\n",deviceNo,in_addr_t2str(dst_addr,buf,sizeof(buf)));
+			if(dst_addr==Device[tno].addr.s_addr){
+				DebugPrintf("[%d]:recv:myaddr\n",deviceNo);
+				return(-1);
+			}
+			*nh_addr=dst_addr;
+			return tno;
+		}
+	}
+	struct node *nh;
+	nh=longest_match_by_daddr(dst_addr,table_root);
+
+	if(nh==NULL){
+		return(-1);
+	}
+	else if(nh->subnet_mask==0){
+		*nh_addr=nh->next_hop;
+		return(LAN_TO_WAN_SIG);	//送り先がWAN
+	}
+	*nh_addr=nh->next_hop;
+	for(tno=0;tno<Param_json.num_of_dev;tno++){
+		if((tno!=deviceNo)&&((*nh_addr&Device[tno].netmask.s_addr)==Device[tno].subnet.s_addr)){
+			return(tno);
+		}
+	}
+
+	return(-1);
+}
+
+int decide_next_mac(u_char *hwaddr,u_int32_t dst_addr,int deviceNo,u_char *data,int size,struct node *table_root){
 	char	buf[80];
 	int	tno;
 	int is_connected_to_dst=0;
@@ -138,12 +172,13 @@ int SetNext(u_char *hwaddr,u_int32_t dst_addr,int deviceNo,u_char *data,int size
 				return(-1);
 			}
 			ip2mac=Ip2Mac(tno,dst_addr,NULL);
-			if(buf_or_set_mac(ip2mac,dst_addr,data,size,hwaddr,tno)==-1){
+			if(buf_or_get_mac(ip2mac,dst_addr,data,size,hwaddr,tno)==-1){
 				return(-1);
 			}
 			is_connected_to_dst=1;
 			break;
 		}
+		
 	}
 	if(is_connected_to_dst==0){
 		IP2MAC	*ip2mac;
@@ -168,7 +203,7 @@ int SetNext(u_char *hwaddr,u_int32_t dst_addr,int deviceNo,u_char *data,int size
 			return(-1);
 		}
 		ip2mac=Ip2Mac(tno,nh_addr,NULL);
-		if(buf_or_set_mac(ip2mac,nh_addr,data,size,hwaddr,tno)==-1){
+		if(buf_or_get_mac(ip2mac,nh_addr,data,size,hwaddr,tno)==-1){
 			return(-1);
 		}
 	}
@@ -269,7 +304,7 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *rttable_root,s
 			if(wan_to_lan(iphdr,ptr,nat_table)==-1){
 				return(-1);
 			}
-			tno=SetNext(hwaddr,iphdr->daddr,deviceNo,data,size,rttable_root);
+			tno=decide_next_mac(hwaddr,iphdr->daddr,deviceNo,data,size,rttable_root);
 			if(tno<0){
 				return(-1);
 			}
@@ -282,17 +317,27 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *rttable_root,s
 			write(Device[tno].soc,data,size);
 		}
 		else{
-			tno=SetNext(hwaddr,iphdr->daddr,deviceNo,data,size,rttable_root);
+			u_int32_t nh_addr;
+			IP2MAC	*ip2mac;
+			tno=search_next_mac(&nh_addr,hwaddr,iphdr->daddr,deviceNo,data,size,rttable_root);
 			if(tno==-1){
 				return(-1);
 			}
 			else if(tno==LAN_TO_WAN_SIG){
-				//nat tableに登録したのち変換して送信処理
-				lan_to_wan(iphdr,ptr,nat_table,Device);
+				//nat tableに登録したのち変換して送信前処理
+				lan_to_wan(iphdr,ptr,nat_table,Device);//src addr portの変換
 			}
-			else{
-				//チェックサム等 else節外すのもあり
+			//チェックサム等
+			ip2mac=Ip2Mac(tno,nh_addr,NULL);
+			if(buf_or_get_mac(ip2mac,nh_addr,data,size,hwaddr,tno)==-1){
+				return(-1);
 			}
+			memcpy(eh->ether_dhost,hwaddr,6);
+			memcpy(eh->ether_shost,Device[tno].hwaddr,6);
+			iphdr->ttl--;
+			iphdr->check=0;
+			iphdr->check=checksum2((u_char *)iphdr,sizeof(struct iphdr),option,optionLen);
+			write(Device[tno].soc,data,size);
 		}
 
 	}
@@ -454,7 +499,7 @@ int main(int argc,char *argv[],char *envp[])
 
 	printf("free()\n");
 	tree_destruct(root);
-	del_nat_table(table);
+	del_nat_table(&table);
 
 	return(0);
 }

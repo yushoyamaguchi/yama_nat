@@ -194,11 +194,16 @@ void del_element(struct nat_table_element *ele){
 }
 
 void del_nat_table(struct nat_table *table){
-    struct nat_table_element *del=table->start->next;
+    struct nat_table_element *del=table->start;
+    if(del==NULL){
+        exit(0);
+    }
+    struct nat_table_element *del2=table->start->next;
     while(del!=NULL){
+        del2=del->next;
         del_element(del->prev);
-        free(del->prev);
-        del=del->next;
+        free(del);
+        del=del2;
     }
     del_element(table->end);
     free(table->end);
@@ -218,6 +223,7 @@ int lan_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table *table,DEVI
         //port割り振ってNATテーブルに要素追加
         insert_nat_table(iphdr,l3_start,table,dev);
         //searchに新しいテーブルの要素をセット
+        search=table->end;
     }
     //srcに自分の情報をセット
     iphdr->saddr=search->glo_tpl->src_addr;
