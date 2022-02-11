@@ -1,0 +1,30 @@
+nodes:
+- name: R1
+  image: yama_router:test
+  interfaces:
+  - { name: net0, type: direct, args: R2#net0 }
+- name: R2
+  image: yama_router:test
+  interfaces:
+  - { name: net0, type: direct, args: R1#net0 }
+  - { name: net1, type: direct, args: C1#net0 }
+- name: C1
+  image: yama_router:test
+  interfaces:
+  - { name: net0, type: direct, args: R2#net1 }
+
+
+node_configs:
+- name: R1
+  cmds:
+  - cmd: ip addr add 10.255.1.1/24 dev net0
+  - cmd: ip route add 10.1.0.0/24 via 10.255.1.2
+- name: R2
+  cmds:
+  - cmd: ip addr add 10.255.1.2/24 dev net0
+  - cmd: ip addr add 10.1.0.1/24 dev net1
+  - cmd: sysctl -w net.ipv4.conf.all.forwarding=0
+- name: C1
+  cmds:
+  - cmd: ip addr add 10.1.0.2/24 dev net0
+  - cmd: ip route add 10.255.1.0/24 via 10.1.0.1
