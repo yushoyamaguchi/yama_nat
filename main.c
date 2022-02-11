@@ -222,7 +222,6 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *rttable_root,s
 	ptr=data;
 	lest=size;
 
-
 	if(lest<sizeof(struct ether_header)){
 		DebugPrintf("[%d]:lest(%d)<sizeof(struct ether_header)\n",deviceNo,lest);
 		return(-1);

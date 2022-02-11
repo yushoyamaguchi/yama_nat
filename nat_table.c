@@ -76,6 +76,12 @@ int tuple_check_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_ele
             return 0;
         }
     }
+    else if(iphdr->protocol==IPPROTO_ICMP){
+        struct icmphdr *ih=(struct icmphdr *)l3_start;
+        if(ih->un.echo.id!=ele->loc_tpl->src_port){
+            return 0;
+        }
+    }
     return 1;
 }
 
@@ -111,6 +117,12 @@ int set_header_to_lan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_elem
             uh->uh_dport=ele->loc_tpl->src_port;
         }
     }
+    else if(iphdr->protocol==IPPROTO_ICMP){
+        struct icmphdr *ih=(struct icmphdr *)l3_start;
+        if(ih->un.echo.id!=ele->glo_tpl->src_port){
+            return 0;
+        }
+    }
     iphdr->daddr=ele->loc_tpl->src_addr;
     return 1;
 
@@ -123,7 +135,8 @@ int wan_to_lan(struct iphdr *iphdr,u_char *l3_start,struct nat_table *table){
         if(set_header_to_lan(iphdr,l3_start,search)==1){
             return 1;
         }
-    }while(search!=table->end);
+        search=search->next;
+    }while(search!=NULL);
     printf("no table element to match\n");
     return(-1);
 }
@@ -148,6 +161,10 @@ void cp_from_l3hdr(struct iphdr *iphdr,u_char *l3_start,struct nat_table_element
         ele->loc_tpl->src_port=uh->uh_sport;
         ele->loc_tpl->dst_port=uh->uh_dport;
         ele->glo_tpl->dst_port=uh->uh_dport;
+    }
+    else if(iphdr->protocol==IPPROTO_ICMP){
+        struct icmphdr *ih=(struct icmphdr *)l3_start;
+        ele->loc_tpl->src_port=ih->un.echo.id;
     }
 }
 
@@ -201,6 +218,10 @@ int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *tabl
     table->used_port[glo_sport%MAX_TABLE_SIZE]=1;
     glo_sport=glo_sport%MAX_TABLE_SIZE+PORT_START;
     new_ele->glo_tpl->src_port=glo_sport;
+    if(iphdr->protocol==IPPROTO_ICMP){
+        new_ele->glo_tpl->src_port=new_ele->loc_tpl->src_port;
+    }
+    printf("insert\n");
     return 1;
 }
 
