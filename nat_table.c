@@ -77,7 +77,6 @@ void del_nat_table_element(struct nat_table *table,struct nat_table_element *ele
     }
     free_element(ele);
     free(ele);
-    printf("delete\n");
 }
 
 int tuple_check_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_element *ele,struct nat_table *table){
@@ -117,6 +116,9 @@ int tuple_check_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_ele
         }
         else if(now-ele->last_time>ICMP_NAT_TIMEOUT_SEC){
             del_nat_table_element(table,ele);
+            table->num--;
+            printf("delete\n");
+            return 0;
         }
     }
     return 1;
@@ -167,14 +169,18 @@ int set_header_to_lan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_elem
 
 int wan_to_lan(struct iphdr *iphdr,u_char *l3_start,struct nat_table *table){
     struct nat_table_element *search;
+    struct nat_table_element *search2;
     search=table->start;
+    int rt;
     do{
-        if(set_header_to_lan(iphdr,l3_start,search)==1){
+        search2=search->next;
+        rt=set_header_to_lan(iphdr,l3_start,search);
+        if(rt==1){
             return 1;
         }
-        search=search->next;
+        search=search2;
     }while(search!=NULL);
-    printf("no table element to match\n");
+    printf("no table element to match : to lan\n");
     return(-1);
 }
 
@@ -211,6 +217,7 @@ void cp_from_l3hdr(struct iphdr *iphdr,u_char *l3_start,struct nat_table_element
 int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *table,DEVICE *dev){
     struct nat_table_element *new_ele;
     time_t now;
+    table->num++;
     now=time(NULL);
     if(table->start==NULL){
         table->start=malloc(sizeof(struct nat_table_element));
@@ -250,6 +257,7 @@ int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *tabl
     init_five_tuple(new_ele->glo_tpl);
     cp_from_iphdr(iphdr,new_ele);
     cp_from_l3hdr(iphdr,l3_start,new_ele);
+    printf("src addr=%x , id=%d , table_num=%d : ",new_ele->loc_tpl->src_addr,new_ele->loc_tpl->src_port,table->num);
     new_ele->glo_tpl->src_addr=dev->addr.s_addr;
     int glo_sport=table->last_gave_port+1;
     int i=0;
@@ -291,18 +299,21 @@ void del_nat_table(struct nat_table *table){
 int lan_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table *table,DEVICE *dev){
     int found=0;
     struct nat_table_element *search;
+    struct nat_table_element *search2;
     search=table->start;
     if(search!=NULL){
         do{
+            search2=search->next;
             if(tuple_check_to_wan(iphdr,l3_start,search,table)==1){
                 found=1;
                 break;
             }
-            search=search->next;
+            search=search2;
         }while(search!=NULL);
     }
     if(!found){
         //port割り振ってNATテーブルに要素追加
+        printf("not found in table : to wan\n");
         insert_nat_table(iphdr,l3_start,table,dev);
         //searchに新しいテーブルの要素をセット
         search=table->end;
