@@ -2,6 +2,8 @@
 #define MAX_TABLE_SIZE  10000
 #define PORT_START 50000
 
+#define	ICMP_NAT_TIMEOUT_SEC	10
+
 struct nat_table{
     struct nat_table_element *start;
     struct nat_table_element *end;
@@ -16,6 +18,8 @@ struct nat_table_element{
     struct  five_tuple  *loc_tpl;
     struct  five_tuple  *glo_tpl;
     u_int8_t     protocol;
+    time_t      last_time;
+    int         is_tcp_estab;
 };
 
 struct five_tuple{

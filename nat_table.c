@@ -16,6 +16,7 @@
 #include	<netinet/tcp.h>
 #include	<pthread.h>
 #include	<jansson.h>
+#include    <time.h>
 #include	"netutil.h"
 #include	"base.h"
 #include	"ip2mac.h"
@@ -38,6 +39,8 @@ void init_nat_table_element(struct nat_table_element *ele){
     ele->loc_tpl=NULL;
     ele->glo_tpl=NULL;
     ele->protocol=0;
+    ele->last_time=0;
+    ele->is_tcp_estab=0;
 }
 
 void init_five_tuple(struct five_tuple *tpl){
@@ -48,7 +51,38 @@ void init_five_tuple(struct five_tuple *tpl){
     tpl->protocol=0;
 }
 
-int tuple_check_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_element *ele){
+void free_element(struct nat_table_element *ele){
+    free(ele->loc_tpl);
+    free(ele->glo_tpl);
+}
+
+void del_nat_table_element(struct nat_table *table,struct nat_table_element *ele){
+    struct nat_table_element *next=ele->next;
+    struct nat_table_element *prev=ele->prev;
+    if(next==NULL&&prev!=NULL){
+        table->end=prev;
+        prev->next=NULL;
+    }
+    else if(next!=NULL&&prev==NULL){
+        table->start=next;
+        next->prev=NULL;
+    }
+    else if(next!=NULL&&prev!=NULL){
+        prev->next=next;
+        next->prev=prev;
+    }
+    else if(next==NULL&&prev==NULL){
+        table->start=NULL;
+        table->end=NULL;
+    }
+    free_element(ele);
+    free(ele);
+    printf("delete\n");
+}
+
+int tuple_check_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_element *ele,struct nat_table *table){
+    time_t now;
+    now=time(NULL);
     if(iphdr->saddr!=ele->loc_tpl->src_addr){
         return 0;
     }
@@ -80,6 +114,9 @@ int tuple_check_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_ele
         struct icmphdr *ih=(struct icmphdr *)l3_start;
         if(ih->un.echo.id!=ele->loc_tpl->src_port){
             return 0;
+        }
+        else if(now-ele->last_time>ICMP_NAT_TIMEOUT_SEC){
+            del_nat_table_element(table,ele);
         }
     }
     return 1;
@@ -168,8 +205,13 @@ void cp_from_l3hdr(struct iphdr *iphdr,u_char *l3_start,struct nat_table_element
     }
 }
 
+
+
+
 int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *table,DEVICE *dev){
     struct nat_table_element *new_ele;
+    time_t now;
+    now=time(NULL);
     if(table->start==NULL){
         table->start=malloc(sizeof(struct nat_table_element));
         if(table->start==NULL){
@@ -178,6 +220,7 @@ int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *tabl
         }
         new_ele=table->start;
         init_nat_table_element(new_ele);
+        new_ele->last_time=now;        
         table->end=new_ele;
     }
     else{
@@ -188,6 +231,7 @@ int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *tabl
         }
         new_ele=table->end->next;
         init_nat_table_element(new_ele);
+        new_ele->last_time=now;
         table->end->next=new_ele;
         new_ele->prev=table->end;
         table->end=new_ele;
@@ -225,11 +269,8 @@ int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *tabl
     return 1;
 }
 
-void del_element(struct nat_table_element *ele){
-    free(ele->loc_tpl);
-    free(ele->glo_tpl);
 
-}
+
 
 void del_nat_table(struct nat_table *table){
     struct nat_table_element *del=table->start;
@@ -241,7 +282,7 @@ void del_nat_table(struct nat_table *table){
     while(del!=NULL){
         i++;
         del2=del->next;
-        del_element(del);
+        free_element(del);
         free(del);
         del=del2;
     }
@@ -253,7 +294,7 @@ int lan_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table *table,DEVI
     search=table->start;
     if(search!=NULL){
         do{
-            if(tuple_check_to_wan(iphdr,l3_start,search)==1){
+            if(tuple_check_to_wan(iphdr,l3_start,search,table)==1){
                 found=1;
                 break;
             }

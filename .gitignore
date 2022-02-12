@@ -4,3 +4,4 @@ core
 router
 *.swp
 yama_nat
+*.bak
