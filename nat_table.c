@@ -276,7 +276,6 @@ int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *tabl
     init_five_tuple(new_ele->glo_tpl);
     cp_from_iphdr(iphdr,new_ele);
     cp_from_l3hdr(iphdr,l3_start,new_ele);
-    printf("src addr=%x , id=%d , table_num=%d , protocol=%d : ",new_ele->loc_tpl->src_addr,new_ele->loc_tpl->src_port,table->num,new_ele->loc_tpl->protocol);
     new_ele->glo_tpl->src_addr=dev->addr.s_addr;
     int glo_sport=table->last_gave_port+1;
     int i=0;
@@ -292,6 +291,7 @@ int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *tabl
     if(iphdr->protocol==IPPROTO_ICMP){
         new_ele->glo_tpl->src_port=new_ele->loc_tpl->src_port;
     }
+    printf("src addr=%x , id=%d , table_num=%d , protocol=%d : ",new_ele->loc_tpl->src_addr,new_ele->loc_tpl->src_port,table->num,new_ele->loc_tpl->protocol);
     printf("insert\n");
     return 1;
 }
