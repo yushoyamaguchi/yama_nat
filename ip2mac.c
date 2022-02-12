@@ -10,6 +10,9 @@
 #include    <netinet/in.h>
 #include    <netinet/ip.h>
 #include    <pthread.h>
+#include	<netinet/ip_icmp.h>
+#include	<netinet/udp.h>
+#include	<netinet/tcp.h>
 
 #include	"netutil.h"
 #include        "base.h"
@@ -28,11 +31,25 @@ struct	{
 	int	no;
 }Ip2Macs[MAX_DEV_NUM];
 
+struct pseudoTCPPacket {
+	uint32_t        srcAddr;
+	uint32_t        dstAddr;
+	uint8_t         zero;
+	uint8_t         protocol;
+	uint16_t        TCP_len;
+};
+
 extern DEVICE	Device[MAX_DEV_NUM];
 extern int	ArpSoc[MAX_DEV_NUM];
 
 extern int	EndFlag;
 
+
+void init_pseudoTCPPacket(struct pseudoTCPPacket *p){
+	p->zero=0;
+	p->protocol=IPPROTO_TCP;
+	p->TCP_len=htons(sizeof(struct tcphdr));
+}
 
 IP2MAC *Ip2MacSearch(int deviceNo,in_addr_t addr,u_char *hwaddr)
 {
@@ -152,6 +169,23 @@ char	buf[80];
 	}
 }
 
+uint16_t tcp_checksum(u_char *ptr,struct iphdr *iphdr){
+	struct tcphdr *th=(struct tcphdr *)ptr;
+
+	struct pseudoTCPPacket pTCPPacket;
+	init_pseudoTCPPacket(&pTCPPacket);
+	char *pseudo_packet;
+	pseudo_packet = (char *)malloc((int) (sizeof(struct pseudoTCPPacket)+sizeof(struct tcphdr)));
+	memset(pseudo_packet, 0, sizeof(struct pseudoTCPPacket)+sizeof(struct tcphdr));
+	pTCPPacket.srcAddr=iphdr->saddr;
+	pTCPPacket.dstAddr=iphdr->daddr;
+	memcpy(pseudo_packet, (char *)&pTCPPacket, sizeof(struct pseudoTCPPacket));
+	th->check=0;
+	memcpy(pseudo_packet+sizeof(struct pseudoTCPPacket), th, sizeof(struct tcphdr));
+	return (checksum((u_char *)pseudo_packet, (int) (sizeof(struct pseudoTCPPacket)+sizeof(struct tcphdr))));
+
+}
+
 int BufferSendOne(int deviceNo,IP2MAC *ip2mac)
 {
 struct ether_header     eh;
@@ -190,6 +224,11 @@ u_char	*ptr;
 		iphdr.check=0;
 		iphdr.check=checksum2((u_char *)&iphdr,sizeof(struct iphdr),option,optionLen);
 		memcpy(data+sizeof(struct ether_header),&iphdr,sizeof(struct iphdr));
+
+		if(iphdr.protocol==IPPROTO_TCP){
+			struct tcphdr *th=(struct tcphdr *)ptr;
+			th->check=tcp_checksum(ptr,&iphdr);
+		}
 
 		DebugPrintf("write:BufferSendOne:[%d] %dbytes\n",deviceNo,size);
 		write(Device[deviceNo].soc,data,size);
