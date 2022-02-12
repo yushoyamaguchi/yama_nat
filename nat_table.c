@@ -82,12 +82,28 @@ void del_nat_table_element(struct nat_table *table,struct nat_table_element *ele
 int tuple_check_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_element *ele,struct nat_table *table){
     time_t now;
     now=time(NULL);
-    if(ele->loc_tpl->protocol==IPPROTO_ICMP){
-        //他のプロトコルも付け足す
+
+    if(ele->loc_tpl->protocol==IPPROTO_TCP){
+        if(now-ele->last_time>TCP_NAT_TIMEOUT_SEC){
+            del_nat_table_element(table,ele);
+            table->num--;
+            printf("delete tcp\n");
+            return 0;
+        }
+    }
+    else if(ele->loc_tpl->protocol==IPPROTO_UDP){
+        if(now-ele->last_time>UDP_NAT_TIMEOUT_SEC){
+            del_nat_table_element(table,ele);
+            table->num--;
+            printf("delete udp\n");
+            return 0;
+        }
+    }
+    else if(ele->loc_tpl->protocol==IPPROTO_ICMP){
         if(now-ele->last_time>ICMP_NAT_TIMEOUT_SEC){
             del_nat_table_element(table,ele);
             table->num--;
-            printf("delete\n");
+            printf("delete icmp\n");
             return 0;
         }
     }
@@ -260,12 +276,12 @@ int insert_nat_table(struct iphdr *iphdr,u_char *l3_start,struct nat_table *tabl
     init_five_tuple(new_ele->glo_tpl);
     cp_from_iphdr(iphdr,new_ele);
     cp_from_l3hdr(iphdr,l3_start,new_ele);
-    printf("src addr=%x , id=%d , table_num=%d : ",new_ele->loc_tpl->src_addr,new_ele->loc_tpl->src_port,table->num);
+    printf("src addr=%x , id=%d , table_num=%d , protocol=%d : ",new_ele->loc_tpl->src_addr,new_ele->loc_tpl->src_port,table->num,new_ele->loc_tpl->protocol);
     new_ele->glo_tpl->src_addr=dev->addr.s_addr;
     int glo_sport=table->last_gave_port+1;
     int i=0;
     for(i=0;i<MAX_TABLE_SIZE;i++){
-        if(table->used_port[glo_sport%MAX_TABLE_SIZE]){
+        if(!table->used_port[glo_sport%MAX_TABLE_SIZE]){
             break;
         }
         glo_sport++;

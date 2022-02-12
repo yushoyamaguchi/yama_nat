@@ -2,6 +2,8 @@
 #define MAX_TABLE_SIZE  10000
 #define PORT_START 50000
 
+#define	TCP_NAT_TIMEOUT_SEC	10
+#define	UDP_NAT_TIMEOUT_SEC	10
 #define	ICMP_NAT_TIMEOUT_SEC	10
 
 struct nat_table{
