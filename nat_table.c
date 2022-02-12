@@ -82,6 +82,15 @@ void del_nat_table_element(struct nat_table *table,struct nat_table_element *ele
 int tuple_check_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_element *ele,struct nat_table *table){
     time_t now;
     now=time(NULL);
+    if(ele->loc_tpl->protocol==IPPROTO_ICMP){
+        //他のプロトコルも付け足す
+        if(now-ele->last_time>ICMP_NAT_TIMEOUT_SEC){
+            del_nat_table_element(table,ele);
+            table->num--;
+            printf("delete\n");
+            return 0;
+        }
+    }
     if(iphdr->saddr!=ele->loc_tpl->src_addr){
         return 0;
     }
@@ -112,12 +121,6 @@ int tuple_check_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_ele
     else if(iphdr->protocol==IPPROTO_ICMP){
         struct icmphdr *ih=(struct icmphdr *)l3_start;
         if(ih->un.echo.id!=ele->loc_tpl->src_port){
-            return 0;
-        }
-        else if(now-ele->last_time>ICMP_NAT_TIMEOUT_SEC){
-            del_nat_table_element(table,ele);
-            table->num--;
-            printf("delete\n");
             return 0;
         }
     }
