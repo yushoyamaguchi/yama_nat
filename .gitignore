@@ -5,3 +5,5 @@ router
 *.swp
 yama_nat
 *.bak
+*router*.sh
+*router*.json
