@@ -41,6 +41,7 @@ void init_nat_table_element(struct nat_table_element *ele){
     ele->protocol=0;
     ele->last_time=0;
     ele->is_tcp_estab=0;
+    ele->tcp_state=0;
 }
 
 void init_five_tuple(struct five_tuple *tpl){
@@ -84,10 +85,16 @@ int tuple_check_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_ele
     now=time(NULL);
 
     if(ele->loc_tpl->protocol==IPPROTO_TCP){
-        if(now-ele->last_time>TCP_NAT_TIMEOUT_SEC){
+        if(ele->is_tcp_estab==0&&now-ele->last_time>TCP_NAT_TIMEOUT_SEC){
             del_nat_table_element(table,ele);
             table->num--;
             printf("delete tcp\n");
+            return 0;
+        }
+        else if(ele->is_tcp_estab==1&&now-ele->last_time>TCP_ESTAB_TIMEOUT){
+            del_nat_table_element(table,ele);
+            table->num--;
+            printf("delete tcp estab\n");
             return 0;
         }
     }
@@ -123,6 +130,21 @@ int tuple_check_to_wan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_ele
         }
         else if(th->dest!=ele->loc_tpl->dst_port){
             return 0;
+        }
+        else if(th->syn==1&&th->ack==1){
+            ele->tcp_state=AFTER_SYN_ACK;
+        }
+        else if(th->syn==0&&th->ack==1&&ele->tcp_state==AFTER_SYN_ACK){
+            ele->tcp_state=ESTAB;
+            ele->is_tcp_estab=1;
+            printf("tcp estab\n");
+        }
+        else if(th->fin==1&&th->ack==1&&ele->tcp_state==ESTAB){
+            ele->tcp_state=AFTER_FIN_ACK;
+        }
+        else if(th->fin==1&&th->ack==1&&ele->tcp_state==AFTER_FIN_ACK){
+            ele->tcp_state=CLOSED;
+            ele->is_tcp_estab=0;
         }
     }
     else if(iphdr->protocol==IPPROTO_UDP){
@@ -160,6 +182,21 @@ int set_header_to_lan(struct iphdr *iphdr,u_char *l3_start,struct nat_table_elem
             return 0;
         }
         else{
+            if(th->syn==1&&th->ack==1){
+                ele->tcp_state=AFTER_SYN_ACK;
+            }
+            else if(th->syn==0&&th->ack==1&&ele->tcp_state==AFTER_SYN_ACK){
+                ele->tcp_state=ESTAB;
+                ele->is_tcp_estab=1;
+                printf("tcp estab\n");
+            }
+            else if(th->fin==1&&th->ack==1&&ele->tcp_state==ESTAB){
+                ele->tcp_state=AFTER_FIN_ACK;
+            }
+            else if(th->fin==1&&th->ack==1&&ele->tcp_state==AFTER_FIN_ACK){
+                ele->tcp_state=CLOSED;
+                ele->is_tcp_estab=0;
+            }
             th->dest=ele->loc_tpl->src_port;
         }
     }

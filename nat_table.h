@@ -6,6 +6,13 @@
 #define	UDP_NAT_TIMEOUT_SEC	10
 #define	ICMP_NAT_TIMEOUT_SEC	10
 
+#define CLOSED 0
+#define AFTER_SYN_ACK 200
+#define ESTAB 300
+#define AFTER_FIN_ACK 100
+
+#define TCP_ESTAB_TIMEOUT 86400
+
 struct nat_table{
     struct nat_table_element *start;
     struct nat_table_element *end;
@@ -22,6 +29,7 @@ struct nat_table_element{
     u_int8_t     protocol;
     time_t      last_time;
     int         is_tcp_estab;
+    int         tcp_state;
 };
 
 struct five_tuple{
