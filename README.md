@@ -17,6 +17,16 @@ git clone https://github.com/yushoyamaguchi/yama_nat.git
     - routing_tableの項目にルーティング情報を書き込む
         - next_hopにWAN側のネクストホップを、subnet_maskに0を設定したものを必ず入れる
 
+```json
+    "routing_table":[
+        {
+            "dest_addr":"0.0.0.0",
+            "subnet_mask":"0",
+            "next_hop":"10.255.1.1"
+        }
+    ]
+```    
+
 - makeを実行する
 
 - yama_routerを実行する
