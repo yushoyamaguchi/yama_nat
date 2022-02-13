@@ -317,6 +317,10 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *rttable_root,s
         		struct tcphdr *th=(struct tcphdr *)ptr;
 				th->check=tcp_checksum(ptr,iphdr);
 			}
+			else if(iphdr->protocol==IPPROTO_UDP){
+				struct udphdr *uh=(struct udphdr *)ptr;
+				uh->check=udp_checksum(ptr,iphdr);
+			}
 			write(Device[tno].soc,data,size);
 		}
 		else{
@@ -343,6 +347,10 @@ int AnalyzePacket(int deviceNo,u_char *data,int size,struct node *rttable_root,s
 			if(iphdr->protocol==IPPROTO_TCP){
         		struct tcphdr *th=(struct tcphdr *)ptr;
 				th->check=tcp_checksum(ptr,iphdr);
+			}
+			else if(iphdr->protocol==IPPROTO_UDP){
+				struct udphdr *uh=(struct udphdr *)ptr;
+				uh->check=udp_checksum(ptr,iphdr);
 			}
 			write(Device[tno].soc,data,size);
 		}

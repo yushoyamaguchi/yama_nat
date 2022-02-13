@@ -39,6 +39,14 @@ struct pseudoTCPPacket {
 	uint16_t        TCP_len;
 };
 
+struct pseudoUDPPacket {
+	uint32_t        srcAddr;
+	uint32_t        dstAddr;
+	uint8_t         zero;
+	uint8_t         protocol;
+	uint16_t        TCP_len;
+};
+
 extern DEVICE	Device[MAX_DEV_NUM];
 extern int	ArpSoc[MAX_DEV_NUM];
 
@@ -49,6 +57,12 @@ void init_pseudoTCPPacket(struct pseudoTCPPacket *p){
 	p->zero=0;
 	p->protocol=IPPROTO_TCP;
 	p->TCP_len=htons(sizeof(struct tcphdr));
+}
+
+void init_pseudoUDPPacket(struct pseudoUDPPacket *p){
+	p->zero=0;
+	p->protocol=IPPROTO_UDP;
+	p->TCP_len=htons(sizeof(struct udphdr));
 }
 
 IP2MAC *Ip2MacSearch(int deviceNo,in_addr_t addr,u_char *hwaddr)
@@ -186,6 +200,22 @@ uint16_t tcp_checksum(u_char *ptr,struct iphdr *iphdr){
 
 }
 
+uint16_t udp_checksum(u_char *ptr,struct iphdr *iphdr){
+	struct udphdr *uh=(struct udphdr *)ptr;
+
+	struct pseudoUDPPacket pUDPPacket;
+	init_pseudoUDPPacket(&pUDPPacket);
+	char *pseudo_packet;
+	pseudo_packet = (char *)malloc((int) (sizeof(struct pseudoUDPPacket)+sizeof(struct udphdr)));
+	memset(pseudo_packet, 0, sizeof(struct pseudoUDPPacket)+sizeof(struct udphdr));
+	pUDPPacket.srcAddr=iphdr->saddr;
+	pUDPPacket.dstAddr=iphdr->daddr;
+	memcpy(pseudo_packet, (char *)&pUDPPacket, sizeof(struct pseudoUDPPacket));
+	uh->check=0;
+	memcpy(pseudo_packet+sizeof(struct pseudoUDPPacket), uh, sizeof(struct udphdr));
+	return (checksum((u_char *)pseudo_packet, (int) (sizeof(struct pseudoUDPPacket)+sizeof(struct udphdr))));
+}
+
 int BufferSendOne(int deviceNo,IP2MAC *ip2mac)
 {
 struct ether_header     eh;
@@ -228,6 +258,10 @@ u_char	*ptr;
 		if(iphdr.protocol==IPPROTO_TCP){
 			struct tcphdr *th=(struct tcphdr *)ptr;
 			th->check=tcp_checksum(ptr,&iphdr);
+		}
+		else if(iphdr.protocol==IPPROTO_UDP){
+			struct udphdr *uh=(struct udphdr *)ptr;
+			uh->check=udp_checksum(ptr,&iphdr);
 		}
 
 		DebugPrintf("write:BufferSendOne:[%d] %dbytes\n",deviceNo,size);
