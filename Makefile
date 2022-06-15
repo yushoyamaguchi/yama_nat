@@ -8,4 +8,4 @@ $(TARGET):$(OBJS)
 
 IMG := yama_router:test
 docker-build:
-	docker build --no-cache -t $(IMG)  .
+	docker build --network=host --no-cache -t $(IMG)  .
